@@ -13,7 +13,7 @@ team_members:
     role: "Solo"
 
 github_repo: "https://github.com/pavanadithyak/redrob-ranker"
-sandbox_link: "https://huggingface.co/spaces/pavanadithyak/redrob-ranker"
+sandbox_link: "https://huggingface.co/spaces/paq1/redrob-ranker"
 reproduce_command: "python rank.py --candidates ./candidates.jsonl --jd ./job_description.docx --out ./submission.csv"
 
 compute:
