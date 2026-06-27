@@ -1,16 +1,16 @@
 # Redrob Hackathon — Submission Metadata
 
-team_name: "pavanadithyak"
+team_name: "allstars"
 
 primary_contact:
-  name: "Pavan Adithyak"
-  email: "pavan@example.com"
-  phone: "+91-XXXXXXXXXX"
+  name: "Pavan Adithya Karnan"
+  email: "pavanadithyawork@gmail.com"
+  phone: "+91-9444336373"
 
 team_members:
-  - name: "Pavan Adithyak"
-    email: "pavan@example.com"
-    role: "Solo"
+  - name: "Pavan Adithya Karnan"
+    email: "pavanadithyawork@gmail.com"
+    role: "Team lead"
 
 github_repo: "https://github.com/pavanadithyak/redrob-ranker"
 sandbox_link: "https://huggingface.co/spaces/paq1/redrob-ranker"

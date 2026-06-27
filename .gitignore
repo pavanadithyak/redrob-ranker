@@ -14,3 +14,12 @@ Thumbs.db
 # Python cache
 __pycache__/
 *.pyc
+
+# Reference docs (not needed for ranking)
+README.docx
+redrob_signals_doc.docx
+sample_candidates.json
+sample_submission.csv
+submission_spec.docx
+candidate_schema.json
+submission_metadata_template.yaml
