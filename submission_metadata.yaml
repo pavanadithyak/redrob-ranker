@@ -1,0 +1,50 @@
+# Redrob Hackathon — Submission Metadata
+
+team_name: "pavanadithyak"
+
+primary_contact:
+  name: "Pavan Adithyak"
+  email: "pavan@example.com"
+  phone: "+91-XXXXXXXXXX"
+
+team_members:
+  - name: "Pavan Adithyak"
+    email: "pavan@example.com"
+    role: "Solo"
+
+github_repo: "https://github.com/pavanadithyak/redrob-ranker"
+sandbox_link: "https://huggingface.co/spaces/pavanadithyak/redrob-ranker"
+reproduce_command: "python rank.py --candidates ./candidates.jsonl --jd ./job_description.docx --out ./submission.csv"
+
+compute:
+  platform: "Local Windows 11"
+  cpu_cores: 8
+  ram_gb: 16
+  python_version: "3.14"
+  os: "Windows 11"
+  uses_gpu_for_inference: false
+  has_network_during_ranking: false
+  pre_computation_required: false
+  pre_computation_time_minutes: 0
+
+ai_tools_used:
+  - "Claude"
+
+ai_usage_summary: |
+  Used Claude for architecture design, code review, and debugging.
+  No candidate data was fed to any LLM.
+
+methodology_summary: |
+  Rule-based ranker with 5-dimensional scoring (skill_match 45%,
+  experience_fit 20%, behavioral 22%, education 7%, availability 6%).
+  Token Jaccard matching with proficiency weights for skills.
+  Gaussian YOE curve centered at 7yr with seniority and career depth
+  bonuses. Honeypot detection via expert+0mo duration signals.
+  0 honeypots in top-100. Runtime ~140s on CPU.
+
+declarations:
+  read_submission_spec: true
+  code_is_original_work: true
+  no_collusion: true
+  honeypot_check_done: true
+  reproduction_tested: true

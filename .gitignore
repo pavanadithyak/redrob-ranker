@@ -1,0 +1,16 @@
+# Large data files (not suitable for git)
+candidates.jsonl
+candidates_*.jsonl
+*.jsonl.gz
+
+# Temp/test output files
+test_output*.csv
+test_submission*.csv
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python cache
+__pycache__/
+*.pyc
