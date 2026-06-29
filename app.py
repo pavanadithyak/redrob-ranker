@@ -1,3 +1,4 @@
+import gzip
 import json
 import tempfile
 from pathlib import Path
@@ -5,6 +6,12 @@ from pathlib import Path
 import gradio as gr
 
 from src.ranker import rank_candidates, load_jd_text
+
+_SAMPLE_JSONL = Path("sample_candidates.jsonl")
+_SAMPLE_GZ = Path("sample_candidates.jsonl.gz")
+if not _SAMPLE_JSONL.exists() and _SAMPLE_GZ.exists():
+    with gzip.open(str(_SAMPLE_GZ), "rt", encoding="utf-8") as f:
+        _SAMPLE_JSONL.write_text(f.read(), encoding="utf-8")
 
 
 def load_candidates_bytes(data: bytes) -> list:
