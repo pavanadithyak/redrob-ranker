@@ -6,6 +6,8 @@ candidates_*.jsonl
 # Temp/test output files
 test_output*.csv
 test_submission*.csv
+submission.csv
+submission*.csv
 
 # OS files
 .DS_Store
