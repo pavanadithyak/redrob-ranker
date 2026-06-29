@@ -70,7 +70,7 @@ with gr.Blocks(title="Redrob AI Ranker") as demo:
                 wrap=True,
             )
     btn.click(fn=process, inputs=[jd_input, candidates_input], outputs=[error, output])
-    gr.Markdown("---\nBuilt for the Redrob AI Challenge | [GitHub](https://github.com/pavanadithyak/redrob-ranker)") — just click **Rank Candidates**.")
+    gr.Markdown("---\nBuilt for the Redrob AI Challenge | [GitHub](https://github.com/pavanadithyak/redrob-ranker)")
 
 if __name__ == "__main__":
     demo.launch()
