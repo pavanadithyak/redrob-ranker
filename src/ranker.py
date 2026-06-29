@@ -554,7 +554,10 @@ def load_jd_text(jd_path):
             raise ImportError("python-docx required for .docx files")
         doc = Document(str(path))
         return "\n".join(p.text for p in doc.paragraphs)
-    return path.read_text(encoding="utf-8")
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return path.read_text(encoding="cp1252")
 
 
 def load_candidates(candidates_path):
