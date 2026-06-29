@@ -1,15 +1,3 @@
----
-title: Redrob AI Ranker
-emoji: 🏆
-colorFrom: "#2D5A27"
-colorTo: "#F5F0E8"
-sdk: gradio
-sdk_version: "4.44.1"
-app_file: app.py
-pinned: false
-python_version: "3.11"
----
-
 # Redrob AI Challenge — Candidate Ranker
 
 ## Reproduce
