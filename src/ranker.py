@@ -12,6 +12,8 @@ from datetime import datetime, date
 
 _TODAY = date.today().isoformat()
 _TODAY_DATE = date.today()
+_SKILL_JACCARD_CACHE = {}
+_ASSESS_JACCARD_CACHE = {}
 
 try:
     from docx import Document
@@ -179,6 +181,10 @@ def parse_jd(text):
 
     result["required_keywords"] = list(set(result["required_keywords"]))
     result["preferred_keywords"] = list(set(result["preferred_keywords"]))
+    result["_center"] = (result["min_yoe"] + result["max_yoe"]) / 2.0
+    result["_n_required"] = len(result["required_keywords"])
+    result["_work_mode"] = result.get("work_mode", "hybrid").lower()
+    result["_pref_locs"] = result["preferred_locations"]
     return result
 
 
@@ -221,42 +227,6 @@ def _tier_rank(t):
     return _TIER_RANK.get(t, 0.3)
 
 
-def _is_honeypot(candidate):
-    skills = candidate.get("skills", [])
-    if not skills:
-        return False
-    expert_zero = sum(
-        1 for s in skills
-        if s and (s.get("proficiency") or "").lower() == "expert" and s.get("duration_months", -1) == 0
-    )
-    if expert_zero > 0:
-        return True
-    total = len(skills)
-    if total >= 8 and expert_zero >= total * 0.5:
-        return True
-    for entry in candidate.get("career_history", []):
-        if entry.get("duration_months", 0) > 600:
-            return True
-
-    # YOE vs career total mismatch
-    yoe = candidate.get("profile", {}).get("years_of_experience", 0)
-    total_career_months = sum(e.get("duration_months", 0) for e in candidate.get("career_history", []))
-    if yoe > 0 and total_career_months > yoe * 12 + 24:
-        return True
-    if yoe > 0 and total_career_months > 0 and total_career_months < yoe * 12 - 24:
-        return True
-
-    # Future dates
-    today = _TODAY
-    for entry in candidate.get("career_history", []):
-        sd = entry.get("start_date", "")
-        ed = entry.get("end_date", "")
-        if (sd and sd > today) or (ed and ed > today):
-            return True
-
-    return False
-
-
 def score_candidate(candidate, jd, skill_index):
     profile = candidate.get("profile", {})
     career_history = candidate.get("career_history", [])
@@ -268,19 +238,23 @@ def score_candidate(candidate, jd, skill_index):
     skill_score = 0.0
     if candidate_skills:
         matches = []
-        _matched = {}
+        n_beginner_matched = 0
+        expert_zero_count = 0
         for s in candidate_skills:
+            prof = (s.get("proficiency") or "beginner").lower()
+            dur = s.get("duration_months", -1)
+            if prof == "expert" and dur == 0:
+                expert_zero_count += 1
             name = s.get("name", "")
             if not name:
                 continue
             c_set = _token_set(name)
             if not c_set:
                 continue
-            pw = _proficiency_weight(s.get("proficiency", "beginner"))
-            dur = s.get("duration_months", 0)
+            pw = _proficiency_weight(prof)
             end = s.get("endorsements", 0)
 
-            cached = _matched.get(name)
+            cached = _SKILL_JACCARD_CACHE.get(name)
             if cached:
                 best, best_is_required = cached
             else:
@@ -293,7 +267,10 @@ def score_candidate(candidate, jd, skill_index):
                         best_is_required = is_req
                         if best >= 0.6:
                             break
-                _matched[name] = (best, best_is_required)
+                _SKILL_JACCARD_CACHE[name] = (best, best_is_required)
+
+            if best > 0.3 and pw <= 0.5:
+                n_beginner_matched += 1
 
             if best > 0.2:
                 db = min(dur / 120, 0.1)
@@ -307,17 +284,11 @@ def score_candidate(candidate, jd, skill_index):
             matches.sort(reverse=True)
             n = len(matches)
             base = sum(matches) / n
-            n_required = len(jd["required_keywords"])
-            if n_required > 0:
-                coverage_frac = n / (n_required * 2)
+            if jd["_n_required"] > 0:
+                coverage_frac = n / (jd["_n_required"] * 2)
                 base += min(coverage_frac * 0.3, 0.15)
 
-            beginner_matches = sum(
-                1 for s in candidate_skills
-                if s.get("name") and _proficiency_weight(s.get("proficiency", "beginner")) <= 0.5
-                and _matched.get(s["name"], (0, False))[0] > 0.3
-            )
-            if matches and beginner_matches / len(matches) > 0.6:
+            if n_beginner_matched / n > 0.6:
                 base *= 0.6
 
             as_scores = rs.get("skill_assessment_scores", {})
@@ -325,14 +296,16 @@ def score_candidate(candidate, jd, skill_index):
                 total_a = 0
                 match_a = 0.0
                 for an, av in as_scores.items():
-                    a_set = _token_set(an)
-                    if not a_set:
-                        continue
-                    _, js_set, _ = next(
-                        (x for x in skill_index if _jaccard(a_set, x[1]) > 0.5),
-                        (None, None, None)
-                    )
-                    if js_set is not None:
+                    if an not in _ASSESS_JACCARD_CACHE:
+                        a_set = _token_set(an)
+                        if not a_set:
+                            _ASSESS_JACCARD_CACHE[an] = None
+                            continue
+                        _ASSESS_JACCARD_CACHE[an] = next(
+                            (x for x in skill_index if _jaccard(a_set, x[1]) > 0.5),
+                            None
+                        )
+                    if _ASSESS_JACCARD_CACHE[an] is not None:
                         match_a += av / 100.0
                     total_a += 1
                 if total_a > 0:
@@ -340,10 +313,9 @@ def score_candidate(candidate, jd, skill_index):
 
             skill_score = min(base, 1.0)
 
-    # ---- experience_fit (20%) ----
+    # ---- experience_fit (20%) + honeypot career_history checks ----
     yoe = profile.get("years_of_experience", 0)
-    center = (jd["min_yoe"] + jd["max_yoe"]) / 2.0
-    yoe_score = math.exp(-0.5 * ((yoe - center) / 3.0) ** 2)
+    yoe_score = math.exp(-0.5 * ((yoe - jd["_center"]) / 3.0) ** 2)
     title = (profile.get("current_title") or "").lower()
     seniority_bonus = 0.0
     if any(t in title for t in ["senior", "lead", "staff", "principal", "head", "chief"]):
@@ -356,9 +328,20 @@ def score_candidate(candidate, jd, skill_index):
     has_prod = False
     has_product_co = False
     consulting_only = True
+    hp_tenure = False
+    hp_future = False
+    total_career_months = 0
     for entry in career_history:
         desc = (entry.get("description") or "").lower()
         co = (entry.get("company") or "").lower()
+        dur = entry.get("duration_months", 0)
+        total_career_months += dur
+        if dur > 600:
+            hp_tenure = True
+        sd = entry.get("start_date", "")
+        ed = entry.get("end_date", "")
+        if (sd and sd > _TODAY) or (ed and ed > _TODAY):
+            hp_future = True
         if _RETRIEVAL_RE.search(desc):
             has_retrieval = True
         if _RANKING_RE.search(desc):
@@ -412,13 +395,23 @@ def score_candidate(candidate, jd, skill_index):
         es = math.log10(max(1, saved)) / 3.0
         gh = rs.get("github_activity_score", -1)
         gs = max(0, gh / 100.0) if gh >= 0 else 0.0
+        pv = rs.get("profile_views_received_30d", 0)
+        pvs = min(pv / 200, 1.0)
+        sa = rs.get("search_appearance_30d", 0)
+        sas = min(sa / 100, 1.0)
+        ap = rs.get("applications_submitted_30d", 0)
+        aps = min(ap / 10, 1.0)
+        cn = rs.get("connection_count", 0)
+        cns = min(cn / 500, 1.0)
+        er = rs.get("endorsements_received", 0)
+        ers = min(er / 100, 1.0)
         ip = 0.0
         if rr < 0.1 and days_since > 90:
             ip = 0.3
         if not o2w and days_since > 60:
             ip = max(ip, 0.2)
-        comps = [(o2w * 0.5 + recency * 0.5), rc, ic, vc, min(es, 1.0), gs]
-        bs = max(min(sum(comps) / len(comps) - ip, 1.0), 0.0)
+        comps = [(o2w * 0.5 + recency * 0.5), rc, ic, vc, min(es, 1.0), gs, pvs, sas, aps, cns, ers]
+        bs = max(min(comps[0]*0.20 + comps[1]*0.14 + comps[2]*0.14 + comps[3]*0.14 + comps[4]*0.10 + comps[5]*0.08 + comps[6]*0.07 + comps[7]*0.05 + comps[8]*0.04 + comps[9]*0.02 + comps[10]*0.02 - ip, 1.0), 0.0)
 
     # ---- education (7%) ----
     edu_score = 0.0
@@ -434,11 +427,10 @@ def score_candidate(candidate, jd, skill_index):
         notice = rs.get("notice_period_days", 90)
         ns = 1.0 if notice <= 30 else (0.7 if notice <= 60 else (0.4 if notice <= 90 else 0.2))
         wm = (rs.get("preferred_work_mode") or "").lower()
-        jd_wm = jd.get("work_mode", "hybrid").lower()
-        ms = 1.0 if wm == jd_wm else (0.9 if wm == "flexible" else (0.7 if wm == "remote" else (0.8 if wm == "onsite" else 0.6)))
+        ms = 1.0 if wm == jd["_work_mode"] else (0.9 if wm == "flexible" else (0.7 if wm == "remote" else (0.8 if wm == "onsite" else 0.6)))
         loc = (profile.get("location") or "").lower()
         co = (profile.get("country") or "").lower()
-        lb = -0.15 if co != "india" else (0.15 if any(p in loc for p in jd["preferred_locations"]) else 0.0)
+        lb = -0.15 if co != "india" else (0.15 if any(p in loc for p in jd["_pref_locs"]) else 0.0)
         if rs.get("willing_to_relocate"):
             lb += 0.05
         sal = rs.get("expected_salary_range_inr_lpa", {})
@@ -452,7 +444,12 @@ def score_candidate(candidate, jd, skill_index):
         avail_score = min(ns * 0.4 + ms * 0.2 + max(0, 1.0 + lb) * 0.2 + sal_align * 0.2, 1.0)
 
     total = 0.45 * skill_score + 0.20 * exp_score + 0.22 * bs + 0.07 * edu_score + 0.06 * avail_score
-    is_hp = _is_honeypot(candidate)
+    hp_yoe_mismatch = False
+    if yoe > 0 and total_career_months > yoe * 12 + 24:
+        hp_yoe_mismatch = True
+    if yoe > 0 and total_career_months > 0 and total_career_months < yoe * 12 - 24:
+        hp_yoe_mismatch = True
+    is_hp = hp_tenure or hp_future or hp_yoe_mismatch or expert_zero_count > 0
     if is_hp:
         total *= 0.3
 
@@ -509,6 +506,8 @@ def _generate_reasoning(candidate, sr, rank):
 
 
 def rank_candidates(candidates, jd_text, top_n=100):
+    _SKILL_JACCARD_CACHE.clear()
+    _ASSESS_JACCARD_CACHE.clear()
     jd = parse_jd(jd_text)
     skill_index = _build_skill_index(jd)
 
