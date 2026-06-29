@@ -10,6 +10,8 @@ import logging
 from pathlib import Path
 from datetime import datetime, date
 
+_TODAY = date.today().isoformat()
+
 try:
     from docx import Document
 except ImportError:
@@ -245,7 +247,7 @@ def _is_honeypot(candidate):
         return True
 
     # Future dates
-    today = date.today().isoformat()
+    today = _TODAY
     for entry in candidate.get("career_history", []):
         sd = entry.get("start_date", "")
         ed = entry.get("end_date", "")

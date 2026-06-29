@@ -8,14 +8,19 @@ import gradio as gr
 from src.ranker import rank_candidates, load_jd_text
 
 CSS = """
-body, .gradio-container { background: #F5F0E8 !important; }
+@import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital@0;1&display=swap');
+body, .gradio-container { background: #f3dfab !important; }
 .gr-box, .panel { border: none !important; box-shadow: none !important; background: transparent !important; }
-h1, h2, h3, label, .gr-text, .prose { font-family: Georgia, 'Times New Roman', serif !important; color: #1a1a1a !important; }
+h1, h2, h3 { font-family: 'Libre Baskerville', Georgia, serif !important; font-style: italic !important; color: #1a1a1a !important; }
+label, .gr-text, .prose { font-family: 'Libre Baskerville', Georgia, serif !important; font-style: italic !important; color: #1a1a1a !important; }
 label span { font-size: 0.9rem !important; letter-spacing: 0.02em !important; text-transform: uppercase !important; font-weight: 400 !important; }
-button, .gr-button, .gr-button-primary { background: #2D5A27 !important; border: none !important; color: #fff !important; font-family: Georgia, serif !important; font-size: 1rem !important; border-radius: 0 !important; padding: 0.5rem 2rem !important; }
-button:hover, .gr-button:hover { background: #1f3f1a !important; }
+button, .gr-button, .gr-button-primary { background: #456e55 !important; border: none !important; color: #fff !important; font-family: 'Libre Baskerville', Georgia, serif !important; font-style: italic !important; font-size: 1rem !important; border-radius: 0 !important; padding: 0.5rem 2rem !important; }
+button:hover, .gr-button:hover { background: #34543f !important; }
+.gr-file { border: 1px dashed #456e55 !important; background: transparent !important; border-radius: 0 !important; padding: 0.75rem 1.5rem !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; }
+.gr-file:hover { background: rgba(69, 110, 85, 0.06) !important; }
+.gr-file-label { font-family: 'Libre Baskerville', Georgia, serif !important; font-style: italic !important; color: #456e55 !important; font-size: 1rem !important; }
 .gr-dataframe { border: 1px solid #d4c9b8 !important; border-radius: 0 !important; background: #faf7f2 !important; }
-.gr-dataframe th { background: #2D5A27 !important; color: #fff !important; font-family: Georgia, serif !important; font-weight: 400 !important; }
+.gr-dataframe th { background: #456e55 !important; color: #fff !important; font-family: 'Libre Baskerville', Georgia, serif !important; font-style: italic !important; font-weight: 400 !important; }
 .gr-dataframe td { font-family: 'Courier New', monospace !important; font-size: 0.85rem !important; border-color: #e5ddd0 !important; }
 footer { display: none !important; }
 """
