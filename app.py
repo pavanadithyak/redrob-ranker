@@ -59,8 +59,8 @@ with gr.Blocks(title="Redrob AI Ranker") as demo:
     gr.Markdown("# Redrob AI Ranker\nScore and rank candidates against a Senior AI Engineer JD.")
     with gr.Row():
         with gr.Column():
-            jd_input = gr.File(label="Job Description (.txt or .docx)", type="binary")
-            candidates_input = gr.File(label="Candidates (.json or .jsonl, max 100)", type="binary")
+            jd_input = gr.File(label="Job Description (.txt or .docx)", type="binary", value="sample_jd.txt")
+            candidates_input = gr.File(label="Candidates (.json or .jsonl, max 100)", type="binary", value="sample_candidates.jsonl")
             btn = gr.Button("Rank Candidates", variant="primary")
         with gr.Column():
             error = gr.HTML(visible=False)
@@ -70,7 +70,7 @@ with gr.Blocks(title="Redrob AI Ranker") as demo:
                 wrap=True,
             )
     btn.click(fn=process, inputs=[jd_input, candidates_input], outputs=[error, output])
-    gr.Markdown("---\nBuilt for the Redrob AI Challenge | [GitHub](https://github.com/pavanadithyak/redrob-ranker)")
+    gr.Markdown("---\nBuilt for the Redrob AI Challenge | [GitHub](https://github.com/pavanadithyak/redrob-ranker) | Sample data pre-loaded — just click **Rank Candidates**.")
 
 if __name__ == "__main__":
     demo.launch()
