@@ -10,7 +10,6 @@ from src.ranker import rank_candidates, load_jd_text
 CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital@0;1&display=swap');
 body, .gradio-container { background: #f3dfab !important; }
-.gr-box, .panel { border: none !important; box-shadow: none !important; background: transparent !important; }
 h1, h2, h3 { font-family: 'Libre Baskerville', Georgia, serif !important; font-style: italic !important; color: #1a1a1a !important; }
 label, .gr-text, .prose { font-family: 'Libre Baskerville', Georgia, serif !important; font-style: italic !important; color: #1a1a1a !important; }
 label span { font-size: 0.9rem !important; letter-spacing: 0.02em !important; text-transform: uppercase !important; font-weight: 400 !important; }
@@ -35,9 +34,9 @@ def load_candidates_bytes(data: bytes) -> list:
 
 def process(jd_file, candidates_file):
     if jd_file is None:
-        return "Upload a job description (.txt or .docx)", None
+        return gr.update(visible=True, value="Upload a job description (.txt or .docx)"), None
     if candidates_file is None:
-        return "Upload a candidates file (.json or .jsonl, max 100 records)", None
+        return gr.update(visible=True, value="Upload a candidates file (.json or .jsonl, max 100 records)"), None
 
     try:
         jd_bytes = jd_file
@@ -49,7 +48,7 @@ def process(jd_file, candidates_file):
         jd_text = load_jd_text(tmp_path)
         Path(tmp_path).unlink(missing_ok=True)
     except Exception as e:
-        return f"Error reading JD: {e}", None
+        return gr.update(visible=True, value=f"Error reading JD: {e}"), None
 
     try:
         candidates_bytes = candidates_file
@@ -57,20 +56,20 @@ def process(jd_file, candidates_file):
             candidates_bytes = Path(candidates_bytes).read_bytes()
         candidates = load_candidates_bytes(candidates_bytes)
         if len(candidates) > 100:
-            return "Max 100 candidates allowed", None
+            return gr.update(visible=True, value="Max 100 candidates allowed"), None
     except Exception as e:
-        return f"Error reading candidates: {e}", None
+        return gr.update(visible=True, value=f"Error reading candidates: {e}"), None
 
     try:
         results = rank_candidates(candidates, jd_text, top_n=len(candidates))
     except Exception as e:
-        return f"Error during ranking: {e}", None
+        return gr.update(visible=True, value=f"Error during ranking: {e}"), None
 
     rows = [
         [r["rank"], r["candidate_id"], f"{r['score']:.4f}", r["reasoning"]]
         for r in results
     ]
-    return None, rows
+    return gr.update(visible=False), rows
 
 
 with gr.Blocks(css=CSS, title="Redrob AI Ranker", theme=gr.themes.Base()) as demo:
@@ -86,7 +85,7 @@ with gr.Blocks(css=CSS, title="Redrob AI Ranker", theme=gr.themes.Base()) as dem
             )
             submit_btn = gr.Button("Rank Candidates", variant="primary")
         with gr.Column():
-            error_output = gr.Textbox(label="", visible=False)
+            error_output = gr.HTML(visible=False)
             output = gr.Dataframe(
                 headers=["Rank", "Candidate ID", "Score", "Reasoning"],
                 label="Results",
