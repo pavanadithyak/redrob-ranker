@@ -11,6 +11,7 @@ from pathlib import Path
 from datetime import datetime, date
 
 _TODAY = date.today().isoformat()
+_TODAY_DATE = date.today()
 
 try:
     from docx import Document
@@ -389,7 +390,7 @@ def score_candidate(candidate, jd, skill_index):
         if last_active_str:
             try:
                 la = datetime.strptime(last_active_str, "%Y-%m-%d").date()
-                days_since = (date.today() - la).days
+                days_since = (_TODAY_DATE - la).days
                 recency = 1.0 / (1.0 + math.exp((days_since - 90) / 30))
             except ValueError:
                 pass
