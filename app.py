@@ -8,7 +8,7 @@ from src.ranker import rank_candidates, load_jd_text
 
 
 def load_candidates_bytes(data: bytes) -> list:
-    content = data.decode("utf-8").strip()
+    content = data.decode("utf-8").strip().lstrip("\ufeff")
     if content.startswith("["):
         return json.loads(content)
     return [json.loads(line) for line in content.splitlines() if line.strip()]

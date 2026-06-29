@@ -554,9 +554,9 @@ def load_jd_text(jd_path):
         doc = Document(str(path))
         return "\n".join(p.text for p in doc.paragraphs)
     try:
-        return path.read_text(encoding="utf-8")
+        return path.read_text(encoding="utf-8").lstrip("\ufeff")
     except UnicodeDecodeError:
-        return path.read_text(encoding="cp1252")
+        return path.read_text(encoding="cp1252").lstrip("\ufeff")
 
 
 def load_candidates(candidates_path):
@@ -565,9 +565,9 @@ def load_candidates(candidates_path):
     if path.suffix.lower() == ".gz":
         import gzip
         with gzip.open(str(path), "rt", encoding="utf-8") as f:
-            content = f.read()
+            content = f.read().lstrip("\ufeff")
     else:
-        content = path.read_text(encoding="utf-8")
+        content = path.read_text(encoding="utf-8").lstrip("\ufeff")
     content = content.strip()
     if content.startswith("["):
         return json.loads(content)
