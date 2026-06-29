@@ -42,8 +42,7 @@ def process(jd_file, candidates_file):
         jd_bytes = jd_file
         if isinstance(jd_bytes, str):
             jd_bytes = Path(jd_bytes).read_bytes()
-        suffix = ".docx" if jd_bytes[:2] == b"PK" else ".txt"
-        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as tmp:
             tmp.write(jd_bytes)
             tmp_path = tmp.name
         jd_text = load_jd_text(tmp_path)
