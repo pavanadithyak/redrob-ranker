@@ -56,10 +56,6 @@ ANTI_JD_HEADERS = [
     "things we explicitly do not want", "do not want",
     "not a fit", "disqualifiers", "anti-requirements",
 ]
-_RETRIEVAL_RE = re.compile(r'(?:embedding|retrieval|vector|search|semantic|similarity|faiss|pinecone|weaviate|qdrant|milvus)')
-_RANKING_RE = re.compile(r'(?:ranking|ranker|recommend|ndcg|mrr|map|learning to rank)')
-_PROD_RE = re.compile(r'(?:production|deployed|shipped|launched|live|scal)')
-
 CONSULTING_FIRMS = {
     "tcs", "infosys", "wipro", "accenture", "cognizant", "capgemini",
     "hcl", "tech mahindra", "mindtree", "ltts",
@@ -235,23 +231,6 @@ def _is_honeypot(candidate):
     for entry in candidate.get("career_history", []):
         if entry.get("duration_months", 0) > 600:
             return True
-
-    # YOE vs career total mismatch
-    yoe = candidate.get("profile", {}).get("years_of_experience", 0)
-    total_career_months = sum(e.get("duration_months", 0) for e in candidate.get("career_history", []))
-    if yoe > 0 and total_career_months > yoe * 12 + 24:
-        return True
-    if yoe > 0 and total_career_months > 0 and total_career_months < yoe * 12 - 24:
-        return True
-
-    # Future dates
-    today = date.today().isoformat()
-    for entry in candidate.get("career_history", []):
-        sd = entry.get("start_date", "")
-        ed = entry.get("end_date", "")
-        if (sd and sd > today) or (ed and ed > today):
-            return True
-
     return False
 
 
@@ -266,7 +245,6 @@ def score_candidate(candidate, jd, skill_index):
     skill_score = 0.0
     if candidate_skills:
         matches = []
-        _matched = {}
         for s in candidate_skills:
             name = s.get("name", "")
             if not name:
@@ -277,28 +255,20 @@ def score_candidate(candidate, jd, skill_index):
             pw = _proficiency_weight(s.get("proficiency", "beginner"))
             dur = s.get("duration_months", 0)
             end = s.get("endorsements", 0)
-
-            cached = _matched.get(name)
-            if cached:
-                best, best_is_required = cached
-            else:
-                best = 0.0
-                best_is_required = False
-                for _, js_set, is_req in skill_index:
-                    sim = _jaccard(c_set, js_set)
-                    if sim > best:
-                        best = sim
-                        best_is_required = is_req
-                        if best >= 0.6:
-                            break
-                _matched[name] = (best, best_is_required)
-
+            best = 0.0
+            best_is_required = False
+            for _, js_set, is_req in skill_index:
+                sim = _jaccard(c_set, js_set)
+                if sim > best:
+                    best = sim
+                    best_is_required = is_req
+                    if best >= 0.6:
+                        break
             if best > 0.2:
+                eb = min(end / 100, 0.1)
                 db = min(dur / 120, 0.1)
                 weight = 1.5 if best_is_required else 1.0
-                confidence = min(end / 100, 0.4)
-                adj_pw = max(pw, confidence)
-                adjusted = min(best * adj_pw * weight + db, 1.0)
+                adjusted = min(best * pw * weight + eb + db, 1.0)
                 matches.append(adjusted)
 
         if matches:
@@ -313,7 +283,7 @@ def score_candidate(candidate, jd, skill_index):
             beginner_matches = sum(
                 1 for s in candidate_skills
                 if s.get("name") and _proficiency_weight(s.get("proficiency", "beginner")) <= 0.5
-                and _matched.get(s["name"], (0, False))[0] > 0.3
+                and any(_jaccard(_token_set(s["name"]), js) > 0.3 for _, js, _ in skill_index)
             )
             if matches and beginner_matches / len(matches) > 0.6:
                 base *= 0.6
@@ -326,12 +296,10 @@ def score_candidate(candidate, jd, skill_index):
                     a_set = _token_set(an)
                     if not a_set:
                         continue
-                    _, js_set, _ = next(
-                        (x for x in skill_index if _jaccard(a_set, x[1]) > 0.5),
-                        (None, None, None)
-                    )
-                    if js_set is not None:
-                        match_a += av / 100.0
+                    for _, js_set, _ in skill_index:
+                        if _jaccard(a_set, js_set) > 0.5:
+                            match_a += av / 100.0
+                            break
                     total_a += 1
                 if total_a > 0:
                     base += (match_a / total_a) * 0.15
@@ -357,11 +325,14 @@ def score_candidate(candidate, jd, skill_index):
     for entry in career_history:
         desc = (entry.get("description") or "").lower()
         co = (entry.get("company") or "").lower()
-        if _RETRIEVAL_RE.search(desc):
+        if any(kw in desc for kw in ["embedding", "retrieval", "vector", "search", "semantic",
+                                       "similarity", "faiss", "pinecone", "weaviate", "qdrant",
+                                       "milvus"]):
             has_retrieval = True
-        if _RANKING_RE.search(desc):
+        if any(kw in desc for kw in ["ranking", "ranker", "recommend", "ndcg", "mrr", "map",
+                                       "learning to rank"]):
             has_ranking = True
-        if _PROD_RE.search(desc):
+        if any(kw in desc for kw in ["production", "deployed", "shipped", "launched", "live", "scal"]):
             has_prod = True
         if not any(ck in co for ck in CONSULTING_FIRMS):
             has_product_co = True
@@ -406,8 +377,10 @@ def score_candidate(candidate, jd, skill_index):
         vp = 0.10 if rs.get("verified_phone") else 0.0
         li = 0.05 if rs.get("linkedin_connected") else 0.0
         vc = min(comp + ve + vp + li, 1.0)
+        views = rs.get("profile_views_received_30d", 0)
         saved = rs.get("saved_by_recruiters_30d", 0)
-        es = math.log10(max(1, saved)) / 3.0
+        sa = rs.get("search_appearance_30d", 0)
+        es = math.log10(max(1, views + saved + sa)) / 3.0
         gh = rs.get("github_activity_score", -1)
         gs = max(0, gh / 100.0) if gh >= 0 else 0.0
         ip = 0.0
@@ -464,7 +437,6 @@ def score_candidate(candidate, jd, skill_index):
         },
         "total": round(total, 4),
         "honeypot": is_hp,
-        "has_prod": has_prod,
     }
 
 
@@ -472,6 +444,7 @@ def _generate_reasoning(candidate, sr, rank):
     profile = candidate.get("profile", {})
     rs = candidate.get("redrob_signals", {})
     skills = candidate.get("skills", [])
+    career_history = candidate.get("career_history", [])
     title = profile.get("current_title", "Professional")
     yoe = profile.get("years_of_experience", 0)
     scores = sr["scores"]
@@ -491,7 +464,11 @@ def _generate_reasoning(candidate, sr, rank):
         concerns.append(f"non-India ({loc})")
 
     current_co = profile.get("current_company", "")
-    has_prod = sr.get("has_prod", False)
+    has_prod = any(
+        any(kw in (e.get("description") or "").lower()
+            for kw in ["production", "deployed", "shipped", "launched"])
+        for e in career_history
+    )
 
     concern_str = concerns[0] if concerns else "no major concerns"
     if rank <= 10:
