@@ -1,3 +1,10 @@
+---
+title: Redrob AI Ranker
+sdk: gradio
+app_file: app.py
+pinned: false
+---
+
 # Redrob AI Challenge — Candidate Ranker
 
 ## Reproduce
