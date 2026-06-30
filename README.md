@@ -13,17 +13,17 @@ pinned: false
 python rank.py --candidates candidates.jsonl --jd job_description.docx --out submission.csv
 ```
 
-## Timing (5 runs — global Jaccard cache + merged traversals)
+## Timing (5 runs — global Jaccard cache)
 
 | Run | Load Candidates | **Ranking** | **Total** |
 |-----|---------------|------------|----------|
-| 1 | 43.73s | **65.33s** | 109.24s |
-| 2 | 29.23s | **43.13s** | 72.51s |
-| 3 | 27.44s | **42.39s** | 70.00s |
-| 4 | 25.10s | **65.70s** | 90.84s |
-| 5 | 42.97s | **53.93s** | 97.24s |
+| 1 | 18.27s | **43.79s** | 62.11s |
+| 2 | 20.16s | **34.27s** | 54.56s |
+| 3 | 22.02s | **27.09s** | 49.14s |
+| 4 | 14.60s | **18.76s** | 33.39s |
+| 5 | 14.67s | **22.46s** | 37.16s |
 
-**Ranking step: ~54s avg (thermal variance 42–66s).** All runs within 5-min limit on CPU-only (1.19 GHz, 16 GB RAM).
+**Ranking step: ~29s avg.** All runs within 5-min limit on CPU-only (1.19 GHz, 16 GB RAM).
 
 ## Performance
 
@@ -75,4 +75,4 @@ Checks merged into career_history loop (no second traversal).
 Try the interactive ranker at https://huggingface.co/spaces/paq1/redrob-ranker
 
 Upload a job description (.txt or .docx) + up to 100 candidate records (.json or .jsonl).
-50-record sample at `sample_candidates.jsonl`.
+100-record sample at `sample_candidates.jsonl.gz` (auto-decompresses in app.py).

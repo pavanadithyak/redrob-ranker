@@ -3,12 +3,12 @@
 team_name: "allstars"
 
 primary_contact:
-  name: "Pavan Adithya Karnan"
+  name: "Pavanadithya Karnan"
   email: "pavanadithyawork@gmail.com"
   phone: "+91-9444336373"
 
 team_members:
-  - name: "Pavan Adithya Karnan"
+  - name: "Pavanadithya Karnan"
     email: "pavanadithyawork@gmail.com"
     role: "Team lead"
 
@@ -40,7 +40,7 @@ methodology_summary: |
   Token Jaccard matching with proficiency weights for skills.
   Gaussian YOE curve centered at 7yr with seniority and career depth
   bonuses. Honeypot detection via expert+0mo duration signals.
-  0 honeypots in top-100. Runtime ~140s on CPU.
+  0 honeypots in top-100. Runtime ~29s on CPU.
 
 declarations:
   read_submission_spec: true
